@@ -41,16 +41,17 @@ def anomaly_isolation_forest(input_data):
     spam_array = np.full((y_pred_outliers.shape[0], 1), -1, dtype=int).flatten()
     ham_array = np.full((y_pred_test.shape[0], 1), 1, dtype=int).flatten()
 
-    print('outliers forest', accuracy_score(spam_array, y_pred_outliers))
-    print('predictions forest', accuracy_score(ham_array, y_pred_test))
-    x, y = confusion_matrix(ham_array, y_pred_test)
-    sensitivity = y[0] / (y[0] + y[1])
-    z, w = confusion_matrix(spam_array, y_pred_outliers)
-    print(z, w)
-    specificity = z[0] / (z[0] + z[1])
-    accuracy = (accuracy_score(spam_array, y_pred_outliers)+accuracy_score(ham_array, y_pred_test))/2
+    actual_array = np.append(ham_array, spam_array)
+    prediction_array = np.append(y_pred_test, y_pred_outliers)
 
-    result_list = [sensitivity, specificity, accuracy]
+    print('predictions svm', accuracy_score(ham_array, y_pred_test))
+    tn, fp, fn, tp = confusion_matrix(actual_array, prediction_array).ravel()
+
+    fpr = fp / (tn+fp)
+    fnr = fn / (tp + fn)
+    accuracy = accuracy_score(actual_array, prediction_array)
+
+    result_list = [fpr, fnr, accuracy]
     return result_list
 
 '''
@@ -70,24 +71,26 @@ def anomaly_svm(input_data):
     spam_array = np.full((y_pred_outliers.shape[0], 1), -1, dtype=int).flatten()
     ham_array = np.full((y_pred_test.shape[0], 1), 1, dtype=int).flatten()
     print('outliers svm', accuracy_score(spam_array, y_pred_outliers))
+
+
+    '''
+    Append spam_array to ham_array and y_pred_outliers to y_pred_test
+    '''
+    actual_array = np.append(ham_array, spam_array)
+    prediction_array = np.append(y_pred_test, y_pred_outliers)
+
     print('predictions svm', accuracy_score(ham_array, y_pred_test))
-    x, y = confusion_matrix(ham_array, y_pred_test)
-    sensitivity = y[0] / (y[0] + y[1])
+    tn, fp, fn, tp = confusion_matrix(actual_array, prediction_array).ravel()
 
-    if len(confusion_matrix(spam_array, y_pred_outliers) == 1):
-       specificity = 0
-    else:
-        z, w = confusion_matrix(spam_array, y_pred_outliers)
-        specificity = z[0] / (z[0] + z[1])
+    fpr = fp / (tn+fp)
+    fnr = fn / (tp + fn)
+    accuracy = accuracy_score(actual_array, prediction_array)
 
-    accuracy = (accuracy_score(spam_array, y_pred_outliers)+accuracy_score(ham_array, y_pred_test))/2
-
-    result_list = [sensitivity, specificity, accuracy]
+    result_list = [fpr, fnr, accuracy]
     return result_list
 
+
     #test_set_spam = input_data[2]
-
-
 '''
 Classifies text using the Naive Bayes classifier.
 features_train = input_val[0]

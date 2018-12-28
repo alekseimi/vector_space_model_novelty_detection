@@ -114,8 +114,7 @@ def split_data_classifier(processed_data):
 #df.to_csv('enronspam_processed.csv')
 
 
-df = pd.read_csv("lingspam_processed.csv")
-vectorized_output = vectorize_data(df)
+
 
 
 #Classification
@@ -150,25 +149,21 @@ plt.show()
 '''
 
 #test = anomaly_split_ham[0].toarray()
+
+df = pd.read_csv("lingspam_processed.csv")
+vectorized_output = vectorize_data(df)
+
 list_isolation_forest = []
 list_one_class_svm = []
 
 for fold in range(10):
     anomaly_split = split_data_anomaly(vectorized_output, 'spam', fold)
     print(pr.anomaly_isolation_forest(anomaly_split))
-    list_isolation_forest.append(pr.anomaly_svm(anomaly_split))
-    list_one_class_svm.append(pr.anomaly_isolation_forest(anomaly_split))
+    list_isolation_forest.append(pr.anomaly_isolation_forest(anomaly_split))
+    list_one_class_svm.append(pr.anomaly_svm(anomaly_split))
 
-write_to_csv('anomaly_svm_lingspam_spam.csv', list_isolation_forest)
-write_to_csv('anomaly_isolation_forest_lingspam_spam.csv', list_one_class_svm)
-
-
-print('Anomaly detection - One-Class SVM')
-
-
-print('Anomaly detection - Isolation Forest')
-
-
+write_to_csv('anomaly_svm_lingspam_spam.csv', list_one_class_svm)
+write_to_csv('anomaly_isolation_forest_lingspam_spam.csv', list_isolation_forest)
 
 
 #print('Vector space model')
