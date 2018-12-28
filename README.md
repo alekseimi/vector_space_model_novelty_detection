@@ -7,3 +7,7 @@ vector_space_model.py - Simple implementation of the Vector Space Model based no
 
 
 data_parser.py - Data parser implementations for the spam assassin and enronspam corpus.
+
+--------------------------------------------------------------------------------------------------------------------
+Attribute order for anomaly_svm and anomaly_isolation_forest is: fnr, fpr, accuracy
+Attribute order for vector_space_model is: threshold, fnr, fpr, accuracy
