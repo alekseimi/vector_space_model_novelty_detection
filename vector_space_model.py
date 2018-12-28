@@ -30,18 +30,19 @@ def draw_roc_curve(fpr, tpr):
 
 
 def divide(lower_threshold, upper_threshold):
-    print(lower_threshold, upper_threshold)
     period = (upper_threshold - lower_threshold)/9
     current_threshold = upper_threshold
     threshold_list = []
     i = 0
     while current_threshold >= lower_threshold:
         i = i + 1
-        print(current_threshold)
         threshold_list.append(current_threshold)
         current_threshold = current_threshold - period
         if i == 9:
-            current_threshold = lower_threshold
+            if current_threshold - period < 0:
+                current_threshold = lower_threshold
+            else:
+                current_threshold = current_threshold - period
             break
 
     threshold_list.append(current_threshold)
@@ -66,7 +67,6 @@ def find_lower_threshold(distance_values, starting_distance):
                 spam_count = spam_count + 1
             else:
                 ham_count = ham_count + 1
-        print(false_negative_ratio(ham_count, spam_count))
         if false_negative_ratio(ham_count, spam_count) == 0:
             break
         else:
@@ -92,7 +92,6 @@ def find_upper_threshold(distance_values, threshold):
                 spam_count = spam_count + 1
             else:
                 ham_count = ham_count + 1
-        print(false_positive_ratio(spam_count, ham_count))
         if false_positive_ratio(spam_count, ham_count) == 0:
             break
         else:
@@ -100,7 +99,7 @@ def find_upper_threshold(distance_values, threshold):
     return threshold
 
 '''
-Fits and predicts the data utilizing the visual_space_model function based on the 'combination_rule' and 'distance_rule parameters'
+Fits and predicts the data utilizing the vector_space_model function based on the 'combination_rule' and 'distance_rule parameters'
 
 combination_rule - 'mean', 'min' or 'max'
 distance_rule - 'euclid' or 'manhattan'
@@ -111,7 +110,7 @@ def fit_predict(input_data, combination_rule='mean', distance_rule='euclidean'):
     train_set = input_data[0]
     test_set_ham = input_data[1]
     test_set_spam = input_data[2]
-    visual_space_model(train_set, test_set_ham, test_set_spam, combination_rule, distance_rule)
+    return vector_space_model(train_set, test_set_ham, test_set_spam, combination_rule, distance_rule)
 
 
 '''
@@ -121,7 +120,7 @@ by Laorden et. al.
 '''
 
 
-def visual_space_model(train_set, test_ham, test_spam, combination_rule, distance_rule):
+def vector_space_model(train_set, test_ham, test_spam, combination_rule, distance_rule):
     distance_matrix = None
     distance_test_ham = None
     distance_test_spam = None
@@ -130,32 +129,31 @@ def visual_space_model(train_set, test_ham, test_spam, combination_rule, distanc
         distance_test_ham = euclidean_distances(test_ham, train_set)
         distance_test_spam = euclidean_distances(test_spam, train_set)
     elif distance_rule == 'manhattan':
-        distance_matrix_ = manhattan_distances(train_set, train_set)
+        distance_matrix = manhattan_distances(train_set, train_set)
         distance_test_ham = manhattan_distances(test_ham, train_set)
         distance_test_spam = manhattan_distances(test_spam, train_set)
 
     if combination_rule == 'mean':
-        distance_matrix_mean = numpy.mean(distance_matrix)
-        lower_threshold = find_lower_threshold(numpy.min(distance_test_spam, axis=1), numpy.min(distance_matrix_mean))
-        upper_threshold = find_upper_threshold(numpy.min(distance_test_ham, axis=1), lower_threshold)
+        distance_matrix_mean = numpy.mean(distance_matrix[distance_matrix != 0])
+        lower_threshold = find_lower_threshold(numpy.mean(distance_test_spam, axis=1), numpy.mean(distance_matrix_mean))
+        upper_threshold = find_upper_threshold(numpy.mean(distance_test_ham, axis=1), lower_threshold)
         threshold_list = divide(lower_threshold, upper_threshold)
-        print(eval_thresholds(threshold_list, numpy.min(distance_test_spam, axis=1), numpy.min(distance_test_ham, axis=1)))
+        return eval_thresholds(threshold_list, numpy.mean(distance_test_spam, axis=1), numpy.mean(distance_test_ham, axis=1))
 
     elif combination_rule == 'min':
-        distance_matrix_min = numpy.min(distance_matrix)
+        distance_matrix_min = numpy.min(distance_matrix[distance_matrix != 0])
         lower_threshold = find_lower_threshold(numpy.min(distance_test_spam, axis=1), distance_matrix_min)
         upper_threshold = find_upper_threshold(numpy.min(distance_test_ham, axis=1), lower_threshold)
         threshold_list = divide(lower_threshold, upper_threshold)
-        print(eval_thresholds(threshold_list, numpy.min(distance_test_spam, axis=1),
-                              numpy.min(distance_test_ham, axis=1)))
-
+        return eval_thresholds(threshold_list, numpy.min(distance_test_spam, axis=1),
+                              numpy.min(distance_test_ham, axis=1))
     elif combination_rule == 'max':
-        distance_matrix_max = numpy.max(distance_matrix)
+        distance_matrix_max = numpy.max(distance_matrix[distance_matrix != 0])
         lower_threshold = find_lower_threshold(numpy.max(distance_test_spam, axis=1), distance_matrix_max)
         upper_threshold = find_upper_threshold(numpy.max(distance_test_ham, axis=1), lower_threshold)
         threshold_list = divide(lower_threshold, upper_threshold)
-        print(eval_thresholds(threshold_list, numpy.max(distance_test_spam, axis=1),
-                              numpy.max(distance_test_ham, axis=1)))
+        return eval_thresholds(threshold_list, numpy.max(distance_test_spam, axis=1),
+                              numpy.max(distance_test_ham, axis=1))
 
 '''
 Evaluate each  thresholds fnr, fpr and wa
@@ -164,9 +162,6 @@ Evaluate each  thresholds fnr, fpr and wa
 
 def eval_thresholds(threshold_list, distance_test_spam, distance_test_ham):
     threshold_master = []
-    fpr_list = []
-    tpr_list = []
-
     for threshold in threshold_list:
         threshold_values_list = [threshold]
         ham_count = 0
@@ -205,8 +200,8 @@ def false_positive_ratio(fp, tn):
 
 
 def true_positive_ratio(tp, fp):
-    return tp/(fp+tp)
+    return tp / (fp + tp)
 
 
 def weighted_accuracy(fnr, fpr):
-    return 1 - ((fnr + fpr)/2)
+    return 1 - ((fnr + fpr) / 2)

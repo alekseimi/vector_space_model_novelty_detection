@@ -6,20 +6,24 @@ import scikitplot as skplt
 from sklearn.metrics import accuracy_score
 from sklearn.svm import OneClassSVM
 from sklearn.ensemble import IsolationForest
-from visual_space_model import fit_predict
-
+from vector_space_model import fit_predict
+from sklearn.metrics import confusion_matrix
 
 
 rng = 123
 
+'''
+Vector space model
+'''
 
-def anomaly_visual_space_model(input_data):
+
+def anomaly_vector_space_model(input_data):
     print(fit_predict(input_data, combination_rule='mean', distance_rule='euclidean'))
 
 
 
 '''
-Novelty detection using the Isolation Forest method. 
+Novelty detection using the Isolation Forest method using the sklearn library and scored by accuracy. 
 features_train = input_val[0]
 features_test = input_val[1]
 labels_train = input_val[2]
@@ -36,18 +40,21 @@ def anomaly_isolation_forest(input_data):
     y_pred_outliers = clf.predict(input_data[2])
     spam_array = np.full((y_pred_outliers.shape[0], 1), -1, dtype=int).flatten()
     ham_array = np.full((y_pred_test.shape[0], 1), 1, dtype=int).flatten()
+
     print('outliers forest', accuracy_score(spam_array, y_pred_outliers))
     print('predictions forest', accuracy_score(ham_array, y_pred_test))
-    skplt.metrics.plot_confusion_matrix(spam_array, y_pred_outliers)
-    plt.show()
-    skplt.metrics.plot_confusion_matrix(ham_array, y_pred_test)
-    plt.show()
+    x, y = confusion_matrix(ham_array, y_pred_test)
+    sensitivity = y[0] / (y[0] + y[1])
+    z, w = confusion_matrix(spam_array, y_pred_outliers)
+    print(z, w)
+    specificity = z[0] / (z[0] + z[1])
+    accuracy = (accuracy_score(spam_array, y_pred_outliers)+accuracy_score(ham_array, y_pred_test))/2
 
-
-
+    result_list = [sensitivity, specificity, accuracy]
+    return result_list
 
 '''
-Anomaly detection using the OneClassSVM method. 
+Anomaly detection using the OneClassSVM method using the sklearn library and scored by accuracy. 
 features_train = input_val[0]
 features_test = input_val[1]
 labels_train = input_val[2]
@@ -64,10 +71,19 @@ def anomaly_svm(input_data):
     ham_array = np.full((y_pred_test.shape[0], 1), 1, dtype=int).flatten()
     print('outliers svm', accuracy_score(spam_array, y_pred_outliers))
     print('predictions svm', accuracy_score(ham_array, y_pred_test))
-    skplt.metrics.plot_confusion_matrix(spam_array, y_pred_outliers)
-    plt.show()
-    skplt.metrics.plot_confusion_matrix(ham_array, y_pred_test)
-    plt.show()
+    x, y = confusion_matrix(ham_array, y_pred_test)
+    sensitivity = y[0] / (y[0] + y[1])
+
+    if len(confusion_matrix(spam_array, y_pred_outliers) == 1):
+       specificity = 0
+    else:
+        z, w = confusion_matrix(spam_array, y_pred_outliers)
+        specificity = z[0] / (z[0] + z[1])
+
+    accuracy = (accuracy_score(spam_array, y_pred_outliers)+accuracy_score(ham_array, y_pred_test))/2
+
+    result_list = [sensitivity, specificity, accuracy]
+    return result_list
 
     #test_set_spam = input_data[2]
 

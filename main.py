@@ -1,3 +1,4 @@
+import csv
 import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score
 import procedures as pr
@@ -11,11 +12,17 @@ from sklearn.model_selection import train_test_split
 from nltk import FreqDist
 import scikitplot as skplt
 import re
-import visual_space_model as vsm
+import vector_space_model as vsm
 
 
 #nltk.download()
 corpus_list = ['lingspam', 'enronspam']
+
+
+def write_to_csv(csv_name, add_list):
+    with open(csv_name, "a") as f:
+        writer = csv.writer(f, delimiter=',')
+        writer.writerows(add_list)
 
 
 def visualize_token_frequency(tokens):
@@ -48,8 +55,7 @@ Splits data in the processed_data array according to the specified split type (s
 which serves as the normal (non-outlier) 
 '''
 
-
-def split_data_anomaly(processed_data, split_type):
+def split_data_anomaly(processed_data, split_type, k):
     if split_type == 'ham':
         split_train = split_type
         split_test = 'spam'
@@ -57,11 +63,37 @@ def split_data_anomaly(processed_data, split_type):
         split_train = split_type
         split_test = 'ham'
     features_train, features_test, labels_train, labels_test = \
-        train_test_split(processed_data, df['class'], test_size=0.33, random_state=100)
+        train_test_split(processed_data, df['class'], test_size=0.33, random_state=k)
     index_train = [i for i, x in enumerate(labels_train) if x == split_train]
     index_test_ham = [i for i, x in enumerate(labels_test) if x == split_train]
     index_test_spam = [i for i, x in enumerate(labels_test) if x == split_test]
     return [features_train[index_train], features_test[index_test_ham], features_test[index_test_spam]]
+
+
+def k_fold_x_val(processed_data, split_type, k=2, distance_rule_c='euclidean', combination_rule_c='min'):
+    master_list = []
+    if split_type == 'ham':
+        split_train = split_type
+        split_test = 'spam'
+    else:
+        split_train = split_type
+        split_test = 'ham'
+    for fold in range(k):
+        features_train, features_test, labels_train, labels_test = \
+            train_test_split(processed_data, df['class'], test_size=0.33, random_state=fold)
+        index_train = [i for i, x in enumerate(labels_train) if x == split_train]
+        index_test_ham = [i for i, x in enumerate(labels_test) if x == split_train]
+        index_test_spam = [i for i, x in enumerate(labels_test) if x == split_test]
+        anomaly_split = [features_train[index_train], features_test[index_test_ham], features_test[index_test_spam]]
+        master_list.append(pr.fit_predict(anomaly_split, distance_rule=distance_rule_c,
+                                          combination_rule=combination_rule_c))
+
+    csv_name = distance_rule_c + '_' + combination_rule_c + '_' + ' lingspam_spam'
+    write_to_csv(csv_name+'.csv', master_list)
+    return master_list
+
+
+
 
 
 '''
@@ -75,22 +107,20 @@ def split_data_classifier(processed_data):
     return [features_train, features_test, labels_train, labels_test]
 
 
-df = pd.read_csv("enronspam_processed.csv")
-print(df.head())
-print(df.groupby(['class']).count())
-print(df['class'])
+
+
+
 #df['processed'] = df['text'].apply(text_preprocessor)
 #df.to_csv('enronspam_processed.csv')
+
+
+df = pd.read_csv("lingspam_processed.csv")
 vectorized_output = vectorize_data(df)
-classifier_split = split_data_classifier(vectorized_output)
-
-predict = pr.classify_naive_bayes(classifier_split)
-print(skplt.metrics.plot_roc(predict[0], predict[2]))
-plt.show()
 
 
-'''
 #Classification
+'''
+print('Classification - Naive Bayes')
 predict = pr.classify_naive_bayes(classifier_split)
 print(accuracy_score(predict[0], predict[1]))
 skplt.metrics.plot_roc(predict[0], predict[2])
@@ -98,6 +128,7 @@ plt.show()
 skplt.metrics.plot_confusion_matrix(predict[0], predict[1])
 plt.show()
 
+print('Classification - Support Vector Machine')
 predict = pr.classify_support_vector_machine(classifier_split)
 print(accuracy_score(predict[0], predict[1]))
 skplt.metrics.plot_roc(predict[0], predict[2])
@@ -107,23 +138,40 @@ plt.show()
 '''
 
 
+
+
+
 '''
- ZANAVANJE ANOMALIJ 
- V okviru eksperimenta bomo preizkušali dve različne metode zaznavanje anomalij oziroma novosti
-    - Enorazredni SVM omogoča zajem oblike podatkovne množice, iz česar sledi, da deluje bolje,
-    kadar lahko identificiramo dve dobro razdeljeni gruči
-    - Isolation Forest algoritmi so snovani na algoritmu Random Forest, zaradi česar so bolje prilagojeni
-    za večdimenzionalne probleme
+ ANOMALY DETECTION 
+    - One-Class SVM has the ability to capture the form of the dataset, which means it operates better on datasets
+     which can be split into two (or more) distinct groups
+    - Isolation Forest is based on the Random Forest algorithm, which makes is appropriate for multi-dimensional problems
+    - Vector Space Model is based on the distance between datasets in the vector space
 '''
 
-anomaly_split_ham = split_data_anomaly(vectorized_output, 'ham')
 #test = anomaly_split_ham[0].toarray()
-#pr.anomaly_svm(anomaly_split_ham)
+list_isolation_forest = []
+list_one_class_svm = []
+
+for fold in range(10):
+    anomaly_split = split_data_anomaly(vectorized_output, 'spam', fold)
+    print(pr.anomaly_isolation_forest(anomaly_split))
+    list_isolation_forest.append(pr.anomaly_svm(anomaly_split))
+    list_one_class_svm.append(pr.anomaly_isolation_forest(anomaly_split))
+
+write_to_csv('anomaly_svm_lingspam_spam.csv', list_isolation_forest)
+write_to_csv('anomaly_isolation_forest_lingspam_spam.csv', list_one_class_svm)
+
+
+print('Anomaly detection - One-Class SVM')
+
+
+print('Anomaly detection - Isolation Forest')
 
 
 
-#pr.anomaly_isolation_forest(anomaly_split_ham)
-#pr.anomaly_svm(anomaly_split_ham)
-#pr.anomaly_isolation_forest(anomaly_split_ham)
-pr.fit_predict(anomaly_split_ham, combination_rule='min')
+
+#print('Vector space model')
+#data_list = k_fold_x_val(vectorized_output, 'spam',
+#                         combination_rule_c='max', distance_rule_c='euclidean', k=10)
 
