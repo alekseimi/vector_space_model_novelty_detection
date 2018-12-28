@@ -1,7 +1,6 @@
-# visual_space_model_novelty_detection
+# vector_space_model_anomaly_detection
 
-
-procedures.py - Classification and novelty detection procedures
+procedures.py - Classification and anomaly detection procedures
 
 
 visual_space_model.py - Simple implementation of the Visual Space Model based novelty detection method based on the article 'Study on the effectiveness of anomaly detection for spam filtering' by Laorden et. al.
